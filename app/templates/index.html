@@ -82,27 +82,52 @@
             responseBox.style.display = "none";
 
             try {
-                const response = await fetch("/chatbot", {
+                // Step 1: Send the query to the chatbot endpoint
+                const chatbotResponse = await fetch("/chatbot", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ input: query, code: code })
                 });
-                const data = await response.json();
+                const chatbotData = await chatbotResponse.json();
 
                 // Hide loading spinner and show response
                 loadingSpinner.style.display = "none";
                 responseBox.style.display = "block";
 
-                if (data.response) {
-                    responseElement.innerText = data.response;
+                if (chatbotData.response) {
+                    responseElement.innerText = chatbotData.response;
                 } else {
-                    responseElement.innerText = "Error: " + (data.error || "No response received.");
+                    responseElement.innerText = "Error: " + (chatbotData.error || "No response received.");
                 }
+
+                // Step 2: Automatically generate documentation after displaying the chatbot response
+                await generateDocumentation(code);
             } catch (error) {
                 // Handle network or other errors
                 loadingSpinner.style.display = "none";
                 responseBox.style.display = "block";
                 responseElement.innerText = "Error: " + error.message;
+            }
+        }
+
+        // Function to generate documentation
+        async function generateDocumentation(code) {
+            try {
+                // Call the /generate-docs endpoint
+                const docsResponse = await fetch("/generate-docs", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: code })
+                });
+                const docsData = await docsResponse.json();
+
+                // Display documentation generation success message
+                const responseElement = document.getElementById("response");
+                responseElement.innerText += "\n\nDocumentation generated successfully! Check the /docs folder.";
+            } catch (error) {
+                console.error("Error generating documentation:", error);
+                const responseElement = document.getElementById("response");
+                responseElement.innerText += "\n\nFailed to generate documentation. Please try again.";
             }
         }
     </script>

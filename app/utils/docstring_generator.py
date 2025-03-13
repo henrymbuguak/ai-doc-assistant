@@ -1,5 +1,6 @@
 import os
 import requests
+from .code_parser import extract_functions_and_classes, extract_function_signature, extract_class_metadata
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -84,4 +85,75 @@ def improve_docstring(existing_docstring, context=None):
         print(f"API Response: {response.status_code}, {response.text}")
         raise Exception(f"Failed to improve docstring: {response.status_code}")    
 
+def generate_markdown_docs(code):
+    """
+    Generate Markdown documentation from Python code.
+    """
+    functions, classes = extract_functions_and_classes(code)
+    docs = "# API Documentation\n\n"
 
+    # Add function documentation
+    docs += "## Functions\n\n"
+    for func in functions:
+        signature = extract_function_signature(func)
+        docs += f"### `{signature['name']}`\n"
+        docs += f"**Arguments:** `{', '.join(signature['args'])}`\n\n"
+        docs += f"**Returns:** `{signature['returns']}`\n\n"
+
+    # Add class documentation
+    docs += "## Classes\n\n"
+    for cls in classes:
+        metadata = extract_class_metadata(cls)
+        docs += f"### `{metadata['name']}`\n"
+        docs += f"**Methods:** `{', '.join(metadata['methods'])}`\n\n"
+        docs += f"**Docstring:** {metadata['docstring']}\n\n"
+
+    return docs
+
+def generate_html_docs(markdown_docs):
+    """
+    Convert Markdown documentation to HTML.
+    """
+    import markdown
+    return markdown.markdown(markdown_docs)
+
+def save_docs(docs, filename):
+    """
+    Save documentation to a file in the /docs folder.
+    If the /docs folder doesn't exist, create it.
+    """
+    # Ensure the /docs folder exists
+    os.makedirs("docs", exist_ok=True)
+    # Save the file in the /docs folder
+    with open(f"docs/{filename}", "w") as f:
+        f.write(docs)
+
+def push_to_github(docs, repo_name, branch="gh-pages"):
+    """
+    Push documentation to GitHub Pages.
+    """
+    import subprocess
+    # Save docs to a temporary file in the /docs folder
+    save_docs(docs, "index.html")
+    # Push the /docs folder to GitHub Pages
+    subprocess.run(["git", "add", "docs/"])
+    subprocess.run(["git", "commit", "-m", "Update documentation"])
+    subprocess.run(["git", "push", "origin", branch])
+
+
+def detect_outdated_docs(code, docs):
+    """
+    Detect outdated documentation by comparing code and docs.
+    """
+    current_docs = generate_markdown_docs(code)
+    if current_docs != docs:
+        return "Documentation is outdated. Please regenerate."
+    return "Documentation is up-to-date."
+
+def tag_documentation_version(version):
+    """
+    Tag the current documentation with a version number.
+    """
+    import subprocess
+    subprocess.run(["git", "tag", f"v{version}"])
+    subprocess.run(["git", "push", "origin", f"v{version}"])
