@@ -2,6 +2,7 @@ import os
 import requests
 from .code_parser import extract_functions_and_classes, extract_function_signature, extract_class_metadata
 from dotenv import load_dotenv
+from .query_handler import explain_code
 
 load_dotenv()
 
@@ -87,7 +88,7 @@ def improve_docstring(existing_docstring, context=None):
 
 def generate_markdown_docs(code):
     """
-    Generate Markdown documentation from Python code.
+    Generate enhanced Markdown documentation from Python code using AI.
     """
     functions, classes = extract_functions_and_classes(code)
     docs = "# API Documentation\n\n"
@@ -100,6 +101,14 @@ def generate_markdown_docs(code):
         docs += f"**Arguments:** `{', '.join(signature['args'])}`\n\n"
         docs += f"**Returns:** `{signature['returns']}`\n\n"
 
+        # Generate AI explanation for the function
+        explanation = explain_code(func, f"What does the function `{signature['name']}` do?")
+        docs += f"**Explanation:** {explanation}\n\n"
+
+        # Generate AI example usage for the function
+        example = explain_code(func, f"Provide an example usage for the function `{signature['name']}`.")
+        docs += f"**Example Usage:**\n```python\n{example}\n```\n\n"
+
     # Add class documentation
     docs += "## Classes\n\n"
     for cls in classes:
@@ -107,6 +116,14 @@ def generate_markdown_docs(code):
         docs += f"### `{metadata['name']}`\n"
         docs += f"**Methods:** `{', '.join(metadata['methods'])}`\n\n"
         docs += f"**Docstring:** {metadata['docstring']}\n\n"
+
+        # Generate AI explanation for the class
+        explanation = explain_code(cls, f"What does the class `{metadata['name']}` do?")
+        docs += f"**Explanation:** {explanation}\n\n"
+
+        # Generate AI example usage for the class
+        example = explain_code(cls, f"Provide an example usage for the class `{metadata['name']}`.")
+        docs += f"**Example Usage:**\n```python\n{example}\n```\n\n"
 
     return docs
 
