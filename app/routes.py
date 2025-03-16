@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, render_template
-from .utils.docstring_generator import generate_docstring, improve_docstring, generate_markdown_docs, generate_html_docs, save_docs
+from .utils.docstring_generator import generate_docstring, improve_docstring, generate_markdown_docs, generate_html_docs, save_docs, tag_documentation_version, detect_outdated_docs, generate_repo_docs
 from app.utils.github_api import fetch_repo_contents, filter_python_files, download_file_contents
 from app.utils.code_parser import extract_functions_and_classes, extract_function_signature, extract_class_metadata
 from .utils.query_handler import explain_code
@@ -134,6 +134,55 @@ def generate_docs_route():
 
         return jsonify({
             "message": "Documentation generated successfully!",
+            "markdown_docs": markdown_docs,
+            "html_docs": html_docs
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@main_bp.route("/tag-version", methods=["POST"])
+def tag_version_route():
+    """
+    Tag the current documentation with a version number.
+    """
+    data = request.json
+    version = data.get("version")
+    try:
+        tag_documentation_version(version)
+        return jsonify({"message": f"Documentation tagged as v{version} successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@main_bp.route("/check-docs", methods=["POST"])
+def check_docs_route():
+    """
+    Check if documentation is outdated.
+    """
+    data = request.json
+    code = data.get("code")
+    docs = data.get("docs")
+    try:
+        result = detect_outdated_docs(code, docs)
+        return jsonify({"message": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@main_bp.route("/generate-repo-docs", methods=["POST"])
+def generate_repo_docs_route():
+    """
+    Generate documentation for an entire repository.
+    """
+    data = request.json
+    owner = data.get("owner")
+    repo = data.get("repo")
+    try:
+        markdown_docs = generate_repo_docs(owner, repo)
+        save_docs(markdown_docs, "repo_docs.md")  # Save Markdown to /docs/repo_docs.md
+        html_docs = generate_html_docs(markdown_docs)
+        save_docs(html_docs, "repo_index.html")  # Save HTML to /docs/repo_index.html
+        return jsonify({
+            "message": "Repository documentation generated successfully!",
             "markdown_docs": markdown_docs,
             "html_docs": html_docs
         })

@@ -42,7 +42,7 @@
 
     # Optionally, you can pass a custom configuration class
     # app = create
-    ```
+```
 
 ### `test`
 **Arguments:** ``
@@ -383,7 +383,7 @@ This function doesn't perform any operations or transformations on the input; it
 
     In this example:
     - The `host` is set to `"127.0.0.1"`, which is the loopback address (localhost).
-    ```
+```
 
 ### `test_user_creation`
 **Arguments:** `app`
@@ -822,5 +822,5 @@ If the password `"SecurePass123"` meets all the criteria, the
     ```python
     # Instantiate the TestConfig class with specific values
     config = TestConfig
-    ```
+```
 

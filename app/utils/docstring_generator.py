@@ -3,6 +3,7 @@ import requests
 from .code_parser import extract_functions_and_classes, extract_function_signature, extract_class_metadata
 from dotenv import load_dotenv
 from .query_handler import explain_code
+from .github_api import fetch_and_process_repo
 
 load_dotenv()
 
@@ -86,17 +87,47 @@ def improve_docstring(existing_docstring, context=None):
         print(f"API Response: {response.status_code}, {response.text}")
         raise Exception(f"Failed to improve docstring: {response.status_code}")    
 
+
 def generate_markdown_docs(code):
     """
-    Generate enhanced Markdown documentation from Python code using AI.
+    Generate enhanced Markdown documentation from Python code or a directory containing Python files.
+    
+    Args:
+        code_or_directory (str): Either a string of Python code or a path to a directory containing .py files.
+    
+    Returns:
+        str: Generated Markdown documentation.
     """
-    functions, classes = extract_functions_and_classes(code)
     docs = "# API Documentation\n\n"
+
+    print(code)
+
+    # If the input is a directory, find and process all .py files
+    if os.path.isdir(code):
+        print(f"Processing directory: {code}")
+        all_code = ""
+        for root, _, files in os.walk(code):
+            for file in files:
+                if file.endswith(".py"):
+                    filepath = os.path.join(root, file)
+                    print(f"Processing file: {filepath}")
+                    with open(filepath, "r") as f:
+                        code = f.read()
+                        all_code += f"# File: {filepath}\n\n{code}\n\n"
+        code = all_code
+    else:
+        # If the input is a string of code, use it directly
+        code = code
+
+    # Extract functions and classes from the code
+    functions, classes = extract_functions_and_classes(code)
+    print(f"Found {len(functions)} functions and {len(classes)} classes.")
 
     # Add function documentation
     docs += "## Functions\n\n"
     for func in functions:
         signature = extract_function_signature(func)
+        print(f"Processing function: {signature['name']}")
         docs += f"### `{signature['name']}`\n"
         docs += f"**Arguments:** `{', '.join(signature['args'])}`\n\n"
         docs += f"**Returns:** `{signature['returns']}`\n\n"
@@ -113,6 +144,7 @@ def generate_markdown_docs(code):
     docs += "## Classes\n\n"
     for cls in classes:
         metadata = extract_class_metadata(cls)
+        print(f"Processing class: {metadata['name']}")
         docs += f"### `{metadata['name']}`\n"
         docs += f"**Methods:** `{', '.join(metadata['methods'])}`\n\n"
         docs += f"**Docstring:** {metadata['docstring']}\n\n"
@@ -125,6 +157,7 @@ def generate_markdown_docs(code):
         example = explain_code(cls, f"Provide an example usage for the class `{metadata['name']}`.")
         docs += f"**Example Usage:**\n```python\n{example}\n```\n\n"
 
+    print("Markdown documentation generated successfully.")
     return docs
 
 def generate_html_docs(markdown_docs):
@@ -174,3 +207,10 @@ def tag_documentation_version(version):
     import subprocess
     subprocess.run(["git", "tag", f"v{version}"])
     subprocess.run(["git", "push", "origin", f"v{version}"])
+
+def generate_repo_docs(owner, repo):
+    """
+    Generate documentation for an entire repository.
+    """
+    code = fetch_and_process_repo(owner, repo)
+    return generate_markdown_docs(code)
